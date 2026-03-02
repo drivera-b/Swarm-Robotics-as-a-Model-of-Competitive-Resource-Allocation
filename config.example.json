@@ -1,0 +1,7 @@
+{
+  "robots": [
+    {"name": "SB-EX01", "address": "AA:BB:CC:DD:EE:01"},
+    {"name": "SB-EX02", "address": "AA:BB:CC:DD:EE:02"},
+    {"name": "SB-EX03", "address": "AA:BB:CC:DD:EE:03"}
+  ]
+}
