@@ -106,6 +106,13 @@ Expected behavior:
 - each robot rolls on heading patterns and stops
 - clean disconnect at end
 
+Emergency stop (any time):
+```bash
+python scripts/run_stop.py --num-robots 3
+```
+
+Also, pressing `Ctrl+C` during `run_mvp.py` or `run_trial.py` stops and disconnects robots.
+
 ## 7) Run a Trial (Decentralized Agents)
 
 Arena assumptions encoded in code:
