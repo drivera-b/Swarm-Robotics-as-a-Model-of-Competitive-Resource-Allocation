@@ -4,6 +4,7 @@ import asyncio
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from src.agent import AgentConfig, RobotAgent
 from src.config import load_config, selected_robot_targets
@@ -11,6 +12,9 @@ from src.crowding import ChoiceRegistry, InferredCrowdingSource, ManualCrowdingS
 from src.discovery import resolve_selected_toys
 from src.robot_client import RobotClient
 from src.trial_logger import TrialLogger
+
+MAX_SCAN_ATTEMPTS = 3
+MAX_CONNECT_ATTEMPTS = 3
 
 
 def _robot_id_from_target(target: dict[str, str], fallback_idx: int) -> str:
@@ -23,6 +27,61 @@ def _robot_id_from_target(target: dict[str, str], fallback_idx: int) -> str:
     return f"robot_{fallback_idx + 1}"
 
 
+async def _resolve_toys_with_retries(
+    targets: list[dict[str, str]],
+    scan_timeout: float,
+) -> list[Any]:
+    last_exc: Exception | None = None
+    for attempt in range(1, MAX_SCAN_ATTEMPTS + 1):
+        try:
+            # Run SDK scan in a worker thread to avoid nested asyncio.run() conflicts.
+            return await asyncio.to_thread(resolve_selected_toys, targets, scan_timeout)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < MAX_SCAN_ATTEMPTS:
+                print(
+                    f"Scan attempt {attempt}/{MAX_SCAN_ATTEMPTS} failed: {exc}. "
+                    "Retrying..."
+                )
+                await asyncio.sleep(1.5)
+    raise RuntimeError(f"Failed to resolve robots after {MAX_SCAN_ATTEMPTS} attempts: {last_exc}")
+
+
+async def _connect_with_retries(
+    *,
+    target: dict[str, str],
+    toy: Any,
+    idx: int,
+    total: int,
+    scan_timeout: float,
+) -> RobotClient:
+    robot_id = _robot_id_from_target(target, idx)
+    last_exc: Exception | None = None
+    current_toy = toy
+
+    for attempt in range(1, MAX_CONNECT_ATTEMPTS + 1):
+        client = RobotClient(toy=current_toy, robot_id=robot_id)
+        print(f"Connecting [{idx + 1}/{total}] {robot_id} ... (attempt {attempt}/{MAX_CONNECT_ATTEMPTS})")
+        try:
+            await client.connect()
+            return client
+        except Exception as exc:
+            last_exc = exc
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+            if attempt < MAX_CONNECT_ATTEMPTS:
+                await asyncio.sleep(1.5)
+                try:
+                    current_toy = (await asyncio.to_thread(resolve_selected_toys, [target], scan_timeout))[0]
+                except Exception:
+                    # If the rescan fails, next loop uses the previous toy object.
+                    pass
+
+    raise RuntimeError(f"Failed to connect robot '{robot_id}' after {MAX_CONNECT_ATTEMPTS} attempts: {last_exc}")
+
+
 async def connect_clients(
     *,
     config_path: Path,
@@ -31,17 +90,23 @@ async def connect_clients(
 ) -> list[RobotClient]:
     config = load_config(config_path)
     targets = selected_robot_targets(config, num_robots)
-    # Run SDK scan in a worker thread to avoid nested asyncio.run() conflicts.
-    toys = await asyncio.to_thread(resolve_selected_toys, targets, scan_timeout)
+    toys = await _resolve_toys_with_retries(targets, scan_timeout)
 
     clients: list[RobotClient] = []
-    for idx, (target, toy) in enumerate(zip(targets, toys)):
-        robot_id = _robot_id_from_target(target, idx)
-        client = RobotClient(toy=toy, robot_id=robot_id)
-        print(f"Connecting [{idx + 1}/{len(toys)}] {robot_id} ...")
-        await client.connect()
-        clients.append(client)
-    return clients
+    try:
+        for idx, (target, toy) in enumerate(zip(targets, toys)):
+            client = await _connect_with_retries(
+                target=target,
+                toy=toy,
+                idx=idx,
+                total=len(toys),
+                scan_timeout=scan_timeout,
+            )
+            clients.append(client)
+        return clients
+    except Exception:
+        await disconnect_clients(clients)
+        raise
 
 
 async def disconnect_clients(clients: list[RobotClient]) -> None:
