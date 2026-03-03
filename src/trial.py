@@ -31,7 +31,8 @@ async def connect_clients(
 ) -> list[RobotClient]:
     config = load_config(config_path)
     targets = selected_robot_targets(config, num_robots)
-    toys = resolve_selected_toys(targets, timeout=scan_timeout)
+    # Run SDK scan in a worker thread to avoid nested asyncio.run() conflicts.
+    toys = await asyncio.to_thread(resolve_selected_toys, targets, scan_timeout)
 
     clients: list[RobotClient] = []
     for idx, (target, toy) in enumerate(zip(targets, toys)):
