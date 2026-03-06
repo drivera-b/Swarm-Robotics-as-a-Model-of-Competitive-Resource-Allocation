@@ -19,7 +19,9 @@ sphero_stem_expo/
   data/                        # CSV output
   scripts/
     run_discovery.py
+    run_launcher.py
     run_mvp.py
+    run_stop.py
     run_trial.py
   src/
     __init__.py
@@ -56,6 +58,24 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+## 3.1) Optional: Launcher App (Easier Run Flow)
+
+Start a local desktop launcher with buttons for scan, discovery save, MVP, trial, and emergency stop:
+
+```bash
+python scripts/run_launcher.py
+```
+
+Recommended launcher flow:
+1. Click `Discovery (Scan Only)`
+2. Set `Discovery Select` to indexes (example: `1,2,3`)
+3. Click `Discovery (Save Selection)`
+4. Click `Run MVP`
+5. Click `Run Trial`
+
+Emergency control:
+- Click `Emergency Stop` or `Interrupt Running`
 
 ## 4) Verify Bluetooth LE on Windows
 
