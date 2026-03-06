@@ -145,7 +145,7 @@ class LauncherApp(tk.Tk):
 
         self._log(
             "Launcher ready.\n"
-            "Tip: use Select Robots (GUI) for point-and-click selection, then run MVP/Trial.\n"
+            "Tip: use Select Robots (GUI), click robots to toggle selection, then Save Selection.\n"
         )
 
     def _log(self, text: str) -> None:
@@ -224,6 +224,44 @@ class LauncherApp(tk.Tk):
         ]
         self._start_command(cmd, "Saving selected robots to config.json...")
 
+    def _config_robot_count(self) -> int | None:
+        config_path = PROJECT_ROOT / "config.json"
+        if not config_path.exists():
+            return None
+        try:
+            import json
+
+            with config_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            robots = data.get("robots", [])
+            if isinstance(robots, list):
+                return len(robots)
+        except Exception:
+            return None
+        return None
+
+    def _ensure_num_robots_matches_config(self) -> bool:
+        try:
+            requested = int(self.num_robots.get())
+        except ValueError:
+            return False
+        available = self._config_robot_count()
+        if available is None:
+            return True
+        if available == 0:
+            messagebox.showerror("No Robots Configured", "config.json has no robots. Select robots first.")
+            return False
+        if requested <= available:
+            return True
+
+        self.num_robots.set(str(available))
+        messagebox.showinfo(
+            "Num Robots Adjusted",
+            f"Requested {requested}, but config.json currently has {available}. "
+            f"Num Robots was set to {available}.",
+        )
+        return True
+
     def _open_robot_selector(self) -> None:
         if self.process and self.process.poll() is None:
             messagebox.showwarning("Process Running", "Interrupt current command first.")
@@ -248,19 +286,41 @@ class LauncherApp(tk.Tk):
         top_row.pack(fill=tk.X)
 
         timeout_var = tk.StringVar(value=self.scan_timeout.get())
+        search_var = tk.StringVar(value="")
         status_var = tk.StringVar(value="Click Scan Nearby to discover robots.")
+        visible_devices: list[tuple[int, dict[str, str]]] = []
 
         ttk.Label(top_row, text="Scan Timeout (s)").pack(side=tk.LEFT)
         ttk.Entry(top_row, textvariable=timeout_var, width=8).pack(side=tk.LEFT, padx=(6, 12))
+        ttk.Label(top_row, text="Search").pack(side=tk.LEFT)
+        ttk.Entry(top_row, textvariable=search_var, width=28).pack(side=tk.LEFT, padx=(6, 8))
 
         list_frame = ttk.Frame(container)
         list_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 8))
 
-        listbox = tk.Listbox(list_frame, selectmode=tk.EXTENDED)
+        listbox = tk.Listbox(list_frame, selectmode=tk.MULTIPLE)
         listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=listbox.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         listbox.config(yscrollcommand=scrollbar.set)
+
+        def refresh_list() -> None:
+            listbox.delete(0, tk.END)
+            visible_devices.clear()
+            query = search_var.get().strip().lower()
+            for orig_idx, device in enumerate(self.discovered_devices, start=1):
+                name = device.get("name", "UNKNOWN")
+                address = device.get("address", "")
+                haystack = f"{name} {address}".lower()
+                if query and query not in haystack:
+                    continue
+                visible_devices.append((orig_idx, device))
+                listbox.insert(tk.END, f"{orig_idx:>2}. {name:<18}  {address}")
+            if self.discovered_devices:
+                status_var.set(
+                    f"Showing {len(visible_devices)}/{len(self.discovered_devices)} robots. "
+                    "Click each robot to toggle selection."
+                )
 
         def scan_now() -> None:
             try:
@@ -278,38 +338,59 @@ class LauncherApp(tk.Tk):
                 return
 
             self.discovered_devices = devices
-            listbox.delete(0, tk.END)
-            for idx, device in enumerate(devices, start=1):
-                name = device.get("name", "UNKNOWN")
-                address = device.get("address", "")
-                listbox.insert(tk.END, f"{idx:>2}. {name:<18}  {address}")
-
             if not devices:
                 status_var.set("No BOLT robots found.")
                 return
-            status_var.set(f"Found {len(devices)} robots. Multi-select then click Save Selection.")
+            refresh_list()
+
+        def select_all_filtered() -> None:
+            if listbox.size() == 0:
+                return
+            listbox.select_set(0, tk.END)
+
+        def clear_selection() -> None:
+            listbox.selection_clear(0, tk.END)
 
         def save_selected_from_list() -> None:
             indices = listbox.curselection()
             if not indices:
                 messagebox.showerror("No Selection", "Select one or more robots from the list.")
                 return
-            selected = [self.discovered_devices[i] for i in indices]
+            selected = [visible_devices[i][1] for i in indices]
             try:
                 save_config(PROJECT_ROOT / "config.json", {"robots": selected})
             except Exception as exc:
                 messagebox.showerror("Save Failed", str(exc))
                 return
 
-            selection_text = ",".join(str(i + 1) for i in indices)
+            selection_text = ",".join(str(visible_devices[i][0]) for i in indices)
             self.discovery_select.set(selection_text)
-            status_var.set(f"Saved {len(selected)} robot(s) to config.json")
-            self._log(f"Saved {len(selected)} robot(s) to config.json via GUI selector.\n")
-            messagebox.showinfo("Saved", f"Saved {len(selected)} robot(s) to config.json")
+            self.num_robots.set(str(len(selected)))
+            status_var.set(
+                f"Saved {len(selected)} robot(s) to config.json. "
+                f"Num Robots auto-set to {len(selected)}."
+            )
+            self._log(
+                f"Saved {len(selected)} robot(s) to config.json via GUI selector. "
+                f"Num Robots set to {len(selected)}.\n"
+            )
+            messagebox.showinfo(
+                "Saved",
+                f"Saved {len(selected)} robot(s) to config.json\nNum Robots set to {len(selected)}",
+            )
+
+        search_var.trace_add("write", lambda *_: refresh_list())
 
         button_row = ttk.Frame(container)
         button_row.pack(fill=tk.X)
         ttk.Button(button_row, text="Scan Nearby", command=scan_now).pack(side=tk.LEFT)
+        ttk.Button(button_row, text="Apply Filter", command=refresh_list).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(button_row, text="Select All Filtered", command=select_all_filtered).pack(
+            side=tk.LEFT, padx=(8, 0)
+        )
+        ttk.Button(button_row, text="Clear Selection", command=clear_selection).pack(
+            side=tk.LEFT, padx=(8, 0)
+        )
         ttk.Button(button_row, text="Save Selection", command=save_selected_from_list).pack(
             side=tk.LEFT, padx=(8, 0)
         )
@@ -319,6 +400,8 @@ class LauncherApp(tk.Tk):
 
     def _run_mvp(self) -> None:
         if not self._validate_common():
+            return
+        if not self._ensure_num_robots_matches_config():
             return
         cmd = [
             "scripts/run_mvp.py",
@@ -338,6 +421,8 @@ class LauncherApp(tk.Tk):
     def _run_trial(self) -> None:
         if not self._validate_common():
             return
+        if not self._ensure_num_robots_matches_config():
+            return
         cmd = self._build_trial_command(
             lambda_value=self.lambda_value.get(),
             crowding_mode=self.crowding_mode.get(),
@@ -346,6 +431,8 @@ class LauncherApp(tk.Tk):
 
     def _run_trial_fixed_lambda(self, lambda_value: str) -> None:
         if not self._validate_common():
+            return
+        if not self._ensure_num_robots_matches_config():
             return
         cmd = self._build_trial_command(lambda_value=lambda_value, crowding_mode="inferred")
         self._start_command(
@@ -379,6 +466,8 @@ class LauncherApp(tk.Tk):
 
     def _run_stop(self) -> None:
         if not self._validate_common():
+            return
+        if not self._ensure_num_robots_matches_config():
             return
         cmd = [
             "scripts/run_stop.py",

@@ -69,9 +69,11 @@ python scripts/run_launcher.py
 
 Recommended launcher flow:
 1. Click `Select Robots (GUI)`
-2. Click `Scan Nearby`, select robots, then `Save Selection`
-4. Click `Run MVP`
-5. Click `Run Trial`
+2. Click `Scan Nearby`
+3. (Optional) use `Search`/`Apply Filter`, then click robots to toggle selection
+4. Click `Save Selection` (this also auto-sets `Num Robots`)
+5. Click `Run MVP`
+6. Click `Run Trial`
 
 For manual lambda testing with inferred crowding, use:
 - `Run Trial (lambda=2, inferred)`
