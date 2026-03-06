@@ -86,6 +86,21 @@ class LauncherApp(tk.Tk):
         self.btn_discovery_save = ttk.Button(buttons, text="Discovery (Save Selection)", command=self._run_discovery_save)
         self.btn_mvp = ttk.Button(buttons, text="Run MVP", command=self._run_mvp)
         self.btn_trial = ttk.Button(buttons, text="Run Trial", command=self._run_trial)
+        self.btn_trial_l2 = ttk.Button(
+            buttons,
+            text="Run Trial (lambda=2, inferred)",
+            command=lambda: self._run_trial_fixed_lambda("2"),
+        )
+        self.btn_trial_l6 = ttk.Button(
+            buttons,
+            text="Run Trial (lambda=6, inferred)",
+            command=lambda: self._run_trial_fixed_lambda("6"),
+        )
+        self.btn_trial_l10 = ttk.Button(
+            buttons,
+            text="Run Trial (lambda=10, inferred)",
+            command=lambda: self._run_trial_fixed_lambda("10"),
+        )
         self.btn_stop = ttk.Button(buttons, text="Emergency Stop", command=self._run_stop)
         self.btn_interrupt = ttk.Button(buttons, text="Interrupt Running", command=self._interrupt_running)
 
@@ -95,6 +110,9 @@ class LauncherApp(tk.Tk):
         self.btn_trial.grid(row=0, column=3, padx=4, pady=4, sticky=tk.W)
         self.btn_stop.grid(row=0, column=4, padx=4, pady=4, sticky=tk.W)
         self.btn_interrupt.grid(row=0, column=5, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l2.grid(row=1, column=0, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l6.grid(row=1, column=1, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l10.grid(row=1, column=2, padx=4, pady=4, sticky=tk.W)
 
         status = ttk.Frame(root, padding=(0, 8))
         status.pack(fill=tk.X)
@@ -211,14 +229,30 @@ class LauncherApp(tk.Tk):
     def _run_trial(self) -> None:
         if not self._validate_common():
             return
+        cmd = self._build_trial_command(
+            lambda_value=self.lambda_value.get(),
+            crowding_mode=self.crowding_mode.get(),
+        )
+        self._start_command(cmd, "Running trial...")
+
+    def _run_trial_fixed_lambda(self, lambda_value: str) -> None:
+        if not self._validate_common():
+            return
+        cmd = self._build_trial_command(lambda_value=lambda_value, crowding_mode="inferred")
+        self._start_command(
+            cmd,
+            f"Running trial (lambda={lambda_value}, crowding=inferred)...",
+        )
+
+    def _build_trial_command(self, *, lambda_value: str, crowding_mode: str) -> list[str]:
         cmd = [
             "scripts/run_trial.py",
             "--num-robots",
             self.num_robots.get(),
             "--lambda-value",
-            self.lambda_value.get(),
+            lambda_value,
             "--crowding-mode",
-            self.crowding_mode.get(),
+            crowding_mode,
             "--trial-seconds",
             self.trial_seconds.get(),
             "--speed",
@@ -232,7 +266,7 @@ class LauncherApp(tk.Tk):
             "--scan-timeout",
             self.scan_timeout.get(),
         ]
-        self._start_command(cmd, "Running trial...")
+        return cmd
 
     def _run_stop(self) -> None:
         if not self._validate_common():

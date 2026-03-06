@@ -74,6 +74,11 @@ Recommended launcher flow:
 4. Click `Run MVP`
 5. Click `Run Trial`
 
+For manual lambda testing with inferred crowding, use:
+- `Run Trial (lambda=2, inferred)`
+- `Run Trial (lambda=6, inferred)`
+- `Run Trial (lambda=10, inferred)`
+
 Emergency control:
 - Click `Emergency Stop` or `Interrupt Running`
 
