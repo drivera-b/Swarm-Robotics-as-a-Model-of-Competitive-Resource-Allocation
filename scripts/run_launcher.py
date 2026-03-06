@@ -12,16 +12,26 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+try:
+    from src.config import save_config
+    from src.discovery import scan_bolts
+except Exception:
+    save_config = None  # type: ignore[assignment]
+    scan_bolts = None  # type: ignore[assignment]
 
 
 class LauncherApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Sphero STEM Expo Launcher")
-        self.geometry("980x680")
+        self.geometry("1120x720")
+        self.minsize(980, 640)
 
         self.process: subprocess.Popen[str] | None = None
         self.output_queue: queue.Queue[str] = queue.Queue()
+        self.discovered_devices: list[dict[str, str]] = []
 
         self.num_robots = tk.StringVar(value="3")
         self.scan_timeout = tk.StringVar(value="10")
@@ -84,6 +94,11 @@ class LauncherApp(tk.Tk):
 
         self.btn_scan = ttk.Button(buttons, text="Discovery (Scan Only)", command=self._run_scan_only)
         self.btn_discovery_save = ttk.Button(buttons, text="Discovery (Save Selection)", command=self._run_discovery_save)
+        self.btn_select_gui = ttk.Button(
+            buttons,
+            text="Select Robots (GUI)",
+            command=self._open_robot_selector,
+        )
         self.btn_mvp = ttk.Button(buttons, text="Run MVP", command=self._run_mvp)
         self.btn_trial = ttk.Button(buttons, text="Run Trial", command=self._run_trial)
         self.btn_trial_l2 = ttk.Button(
@@ -102,17 +117,18 @@ class LauncherApp(tk.Tk):
             command=lambda: self._run_trial_fixed_lambda("10"),
         )
         self.btn_stop = ttk.Button(buttons, text="Emergency Stop", command=self._run_stop)
-        self.btn_interrupt = ttk.Button(buttons, text="Interrupt Running", command=self._interrupt_running)
+        self.btn_interrupt = ttk.Button(buttons, text="Interrupt", command=self._interrupt_running)
 
         self.btn_scan.grid(row=0, column=0, padx=4, pady=4, sticky=tk.W)
         self.btn_discovery_save.grid(row=0, column=1, padx=4, pady=4, sticky=tk.W)
-        self.btn_mvp.grid(row=0, column=2, padx=4, pady=4, sticky=tk.W)
-        self.btn_trial.grid(row=0, column=3, padx=4, pady=4, sticky=tk.W)
-        self.btn_stop.grid(row=0, column=4, padx=4, pady=4, sticky=tk.W)
-        self.btn_interrupt.grid(row=0, column=5, padx=4, pady=4, sticky=tk.W)
-        self.btn_trial_l2.grid(row=1, column=0, padx=4, pady=4, sticky=tk.W)
-        self.btn_trial_l6.grid(row=1, column=1, padx=4, pady=4, sticky=tk.W)
-        self.btn_trial_l10.grid(row=1, column=2, padx=4, pady=4, sticky=tk.W)
+        self.btn_select_gui.grid(row=0, column=2, padx=4, pady=4, sticky=tk.W)
+        self.btn_mvp.grid(row=1, column=0, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial.grid(row=1, column=1, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l2.grid(row=1, column=2, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l6.grid(row=1, column=3, padx=4, pady=4, sticky=tk.W)
+        self.btn_trial_l10.grid(row=1, column=4, padx=4, pady=4, sticky=tk.W)
+        self.btn_stop.grid(row=2, column=0, padx=4, pady=4, sticky=tk.W)
+        self.btn_interrupt.grid(row=2, column=1, padx=4, pady=4, sticky=tk.W)
 
         status = ttk.Frame(root, padding=(0, 8))
         status.pack(fill=tk.X)
@@ -129,7 +145,7 @@ class LauncherApp(tk.Tk):
 
         self._log(
             "Launcher ready.\n"
-            "Tip: run Scan Only first, then set Discovery Select (example: 1,2,3), then Save Selection.\n"
+            "Tip: use Select Robots (GUI) for point-and-click selection, then run MVP/Trial.\n"
         )
 
     def _log(self, text: str) -> None:
@@ -207,6 +223,99 @@ class LauncherApp(tk.Tk):
             select_value,
         ]
         self._start_command(cmd, "Saving selected robots to config.json...")
+
+    def _open_robot_selector(self) -> None:
+        if self.process and self.process.poll() is None:
+            messagebox.showwarning("Process Running", "Interrupt current command first.")
+            return
+        if scan_bolts is None or save_config is None:
+            messagebox.showerror(
+                "Unavailable",
+                "GUI robot selector is unavailable because discovery modules did not import.",
+            )
+            return
+
+        selector = tk.Toplevel(self)
+        selector.title("Select Robots")
+        selector.geometry("760x460")
+        selector.transient(self)
+        selector.grab_set()
+
+        container = ttk.Frame(selector, padding=10)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        top_row = ttk.Frame(container)
+        top_row.pack(fill=tk.X)
+
+        timeout_var = tk.StringVar(value=self.scan_timeout.get())
+        status_var = tk.StringVar(value="Click Scan Nearby to discover robots.")
+
+        ttk.Label(top_row, text="Scan Timeout (s)").pack(side=tk.LEFT)
+        ttk.Entry(top_row, textvariable=timeout_var, width=8).pack(side=tk.LEFT, padx=(6, 12))
+
+        list_frame = ttk.Frame(container)
+        list_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 8))
+
+        listbox = tk.Listbox(list_frame, selectmode=tk.EXTENDED)
+        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=listbox.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        listbox.config(yscrollcommand=scrollbar.set)
+
+        def scan_now() -> None:
+            try:
+                timeout = float(timeout_var.get())
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Scan timeout must be a number.")
+                return
+            status_var.set("Scanning...")
+            selector.update_idletasks()
+            try:
+                devices = scan_bolts(timeout=timeout)
+            except Exception as exc:
+                status_var.set(f"Scan failed: {exc}")
+                self._log(f"GUI scan failed: {exc}\n")
+                return
+
+            self.discovered_devices = devices
+            listbox.delete(0, tk.END)
+            for idx, device in enumerate(devices, start=1):
+                name = device.get("name", "UNKNOWN")
+                address = device.get("address", "")
+                listbox.insert(tk.END, f"{idx:>2}. {name:<18}  {address}")
+
+            if not devices:
+                status_var.set("No BOLT robots found.")
+                return
+            status_var.set(f"Found {len(devices)} robots. Multi-select then click Save Selection.")
+
+        def save_selected_from_list() -> None:
+            indices = listbox.curselection()
+            if not indices:
+                messagebox.showerror("No Selection", "Select one or more robots from the list.")
+                return
+            selected = [self.discovered_devices[i] for i in indices]
+            try:
+                save_config(PROJECT_ROOT / "config.json", {"robots": selected})
+            except Exception as exc:
+                messagebox.showerror("Save Failed", str(exc))
+                return
+
+            selection_text = ",".join(str(i + 1) for i in indices)
+            self.discovery_select.set(selection_text)
+            status_var.set(f"Saved {len(selected)} robot(s) to config.json")
+            self._log(f"Saved {len(selected)} robot(s) to config.json via GUI selector.\n")
+            messagebox.showinfo("Saved", f"Saved {len(selected)} robot(s) to config.json")
+
+        button_row = ttk.Frame(container)
+        button_row.pack(fill=tk.X)
+        ttk.Button(button_row, text="Scan Nearby", command=scan_now).pack(side=tk.LEFT)
+        ttk.Button(button_row, text="Save Selection", command=save_selected_from_list).pack(
+            side=tk.LEFT, padx=(8, 0)
+        )
+        ttk.Button(button_row, text="Close", command=selector.destroy).pack(side=tk.RIGHT)
+
+        ttk.Label(container, textvariable=status_var).pack(fill=tk.X, pady=(8, 0))
 
     def _run_mvp(self) -> None:
         if not self._validate_common():

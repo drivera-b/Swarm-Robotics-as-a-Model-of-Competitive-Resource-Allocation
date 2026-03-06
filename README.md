@@ -68,9 +68,8 @@ python scripts/run_launcher.py
 ```
 
 Recommended launcher flow:
-1. Click `Discovery (Scan Only)`
-2. Set `Discovery Select` to indexes (example: `1,2,3`)
-3. Click `Discovery (Save Selection)`
+1. Click `Select Robots (GUI)`
+2. Click `Scan Nearby`, select robots, then `Save Selection`
 4. Click `Run MVP`
 5. Click `Run Trial`
 
@@ -80,7 +79,7 @@ For manual lambda testing with inferred crowding, use:
 - `Run Trial (lambda=10, inferred)`
 
 Emergency control:
-- Click `Emergency Stop` or `Interrupt Running`
+- Click `Emergency Stop` or `Interrupt`
 
 ## 4) Verify Bluetooth LE on Windows
 
