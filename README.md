@@ -124,7 +124,7 @@ Example `config.json`:
 Use this first to verify concurrent connect + roll + stop reliability:
 
 ```bash
-python scripts/run_mvp.py --num-robots 3 --speed 60 --roll-seconds 2
+python scripts/run_mvp.py --num-robots 3 --speed 30 --roll-seconds 0.9
 ```
 
 Expected behavior:
@@ -142,6 +142,14 @@ Also, pressing `Ctrl+C` during `run_mvp.py` or `run_trial.py` stops and disconne
 ## 7) Run a Trial (Decentralized Agents)
 
 Arena assumptions encoded in code:
+- arena size: `24in x 24in` (2ft x 2ft)
+- center start box: `8in x 8in`
+- corner zone size: `4in x 4in`
+- zone centers (inches):
+  - `A (-10, 10)`
+  - `B (10, 10)`
+  - `C (-10, -10)`
+  - `D (10, -10)`
 - zone headings from center start box:
   - `A=315`, `B=45`, `C=225`, `D=135`
 - rotating value schedule:
@@ -150,6 +158,11 @@ Arena assumptions encoded in code:
   - `60-90s: A20 B10 C40 D30`
 - score rule:
   - `score = zone_value(t) - (lambda * robots_near_zone)`
+- small-arena motion tuning:
+  - default speed `30` (recommended range: `25-35`)
+  - capped short roll pulses (max `0.9s`) to reduce overshoot
+  - stop/hold behavior when near zone center
+  - simple local avoidance: if another robot is estimated nearby, heading is adjusted slightly before move
 
 ### Option A: inferred crowding (from last chosen zones)
 

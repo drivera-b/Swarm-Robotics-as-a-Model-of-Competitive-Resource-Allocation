@@ -10,7 +10,11 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.constants import DEFAULT_TRIAL_SECONDS
+from src.constants import (
+    DEFAULT_SMALL_ARENA_ROLL_SECONDS,
+    DEFAULT_SMALL_ARENA_SPEED,
+    DEFAULT_TRIAL_SECONDS,
+)
 from src.trial import run_trial
 
 
@@ -25,8 +29,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default="inferred",
     )
     parser.add_argument("--trial-seconds", type=int, default=DEFAULT_TRIAL_SECONDS)
-    parser.add_argument("--speed", type=int, default=60, help="Roll speed")
-    parser.add_argument("--roll-seconds", type=float, default=2.0, help="Roll duration")
+    parser.add_argument("--speed", type=int, default=DEFAULT_SMALL_ARENA_SPEED, help="Roll speed")
+    parser.add_argument(
+        "--roll-seconds",
+        type=float,
+        default=DEFAULT_SMALL_ARENA_ROLL_SECONDS,
+        help="Max roll pulse duration",
+    )
     parser.add_argument("--decision-min", type=float, default=2.0, help="Decision loop min interval")
     parser.add_argument("--decision-max", type=float, default=3.0, help="Decision loop max interval")
     parser.add_argument("--scan-timeout", type=float, default=10.0)

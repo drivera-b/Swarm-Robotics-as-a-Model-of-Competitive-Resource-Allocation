@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.agent import AgentConfig, RobotAgent
+from src.agent import AgentConfig, PositionRegistry, RobotAgent
 from src.config import load_config, selected_robot_targets
 from src.crowding import ChoiceRegistry, InferredCrowdingSource, ManualCrowdingSource
 from src.discovery import resolve_selected_toys
@@ -190,6 +190,7 @@ async def run_trial(
         speed=speed,
         trial_seconds=trial_seconds,
     )
+    position_registry = PositionRegistry([client.robot_id for client in clients])
     agents = [
         RobotAgent(
             robot_id=client.robot_id,
@@ -197,6 +198,7 @@ async def run_trial(
             config=agent_config,
             crowding_source=crowding_source,
             choice_registry=choice_registry,
+            position_registry=position_registry,
             logger=logger,
         )
         for client in clients

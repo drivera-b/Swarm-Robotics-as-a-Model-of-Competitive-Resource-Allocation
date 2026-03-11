@@ -35,8 +35,8 @@ class LauncherApp(tk.Tk):
 
         self.num_robots = tk.StringVar(value="3")
         self.scan_timeout = tk.StringVar(value="10")
-        self.speed = tk.StringVar(value="35")
-        self.roll_seconds = tk.StringVar(value="1")
+        self.speed = tk.StringVar(value="30")
+        self.roll_seconds = tk.StringVar(value="0.9")
         self.cycles = tk.StringVar(value="2")
         self.lambda_value = tk.StringVar(value="2")
         self.crowding_mode = tk.StringVar(value="inferred")
