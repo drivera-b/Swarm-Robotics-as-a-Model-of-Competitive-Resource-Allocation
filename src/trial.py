@@ -212,7 +212,8 @@ async def run_trial(
     trial_start = time.monotonic()
     print(
         f"\nTrial start: robots={num_robots}, lambda={lambda_value}, "
-        f"mode={crowding_mode}, duration={trial_seconds}s"
+        f"mode={crowding_mode}, duration={trial_seconds}s, speed={speed}, max_roll={roll_seconds}s, "
+        f"decision={decision_min_seconds}-{decision_max_seconds}s"
     )
 
     try:

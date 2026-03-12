@@ -31,12 +31,14 @@ class AgentConfig:
     roll_seconds: float
     speed: int
     trial_seconds: int
-    min_roll_seconds: float = 0.45
-    max_roll_seconds: float = 1.2
-    zone_stop_radius_in: float = 1.5
-    collision_distance_threshold_in: float = 2.0
-    avoidance_heading_offset_deg: float = 8.0
-    speed_to_inches_per_second: float = 0.22
+    min_roll_seconds: float = 0.5
+    max_roll_seconds: float = 1.25
+    very_close_stop_radius_in: float = 0.35
+    zone_stop_radius_in: float = 0.9
+    zone_correction_roll_seconds: float = 0.2
+    collision_distance_threshold_in: float = 1.3
+    avoidance_heading_offset_deg: float = 6.0
+    speed_to_inches_per_second: float = 0.12
 
 
 class PositionRegistry:
@@ -101,8 +103,10 @@ def _heading_toward(current: tuple[float, float], target: tuple[float, float], f
 
 
 def _roll_duration_for_distance(distance_to_zone: float, config: AgentConfig) -> float:
-    if distance_to_zone <= config.zone_stop_radius_in:
+    if distance_to_zone <= config.very_close_stop_radius_in:
         return 0.0
+    if distance_to_zone <= config.zone_stop_radius_in:
+        return config.zone_correction_roll_seconds
 
     approx_duration = distance_to_zone / max(1.0, config.speed * config.speed_to_inches_per_second)
     upper = min(config.roll_seconds, config.max_roll_seconds)

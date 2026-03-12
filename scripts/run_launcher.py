@@ -35,13 +35,13 @@ class LauncherApp(tk.Tk):
 
         self.num_robots = tk.StringVar(value="3")
         self.scan_timeout = tk.StringVar(value="10")
-        self.speed = tk.StringVar(value="35")
-        self.roll_seconds = tk.StringVar(value="1.1")
+        self.speed = tk.StringVar(value="45")
+        self.roll_seconds = tk.StringVar(value="1.15")
         self.cycles = tk.StringVar(value="2")
-        self.lambda_value = tk.StringVar(value="2")
+        self.lambda_value = tk.StringVar(value="10")
         self.crowding_mode = tk.StringVar(value="inferred")
-        self.decision_min = tk.StringVar(value="1.5")
-        self.decision_max = tk.StringVar(value="2.0")
+        self.decision_min = tk.StringVar(value="0.9")
+        self.decision_max = tk.StringVar(value="1.2")
         self.trial_seconds = tk.StringVar(value="90")
         self.discovery_select = tk.StringVar(value="1,2,3")
         self.status_text = tk.StringVar(value="Idle")
@@ -99,6 +99,11 @@ class LauncherApp(tk.Tk):
             text="Select Robots (GUI)",
             command=self._open_robot_selector,
         )
+        self.btn_fast_preset = ttk.Button(
+            buttons,
+            text="Apply Fast Demo Preset",
+            command=self._apply_fast_demo_preset,
+        )
         self.btn_calibrate = ttk.Button(buttons, text="Calibrate Heading", command=self._run_calibrate)
         self.btn_mvp = ttk.Button(buttons, text="Run MVP", command=self._run_mvp)
         self.btn_trial = ttk.Button(buttons, text="Run Trial", command=self._run_trial)
@@ -123,7 +128,8 @@ class LauncherApp(tk.Tk):
         self.btn_scan.grid(row=0, column=0, padx=4, pady=4, sticky=tk.W)
         self.btn_discovery_save.grid(row=0, column=1, padx=4, pady=4, sticky=tk.W)
         self.btn_select_gui.grid(row=0, column=2, padx=4, pady=4, sticky=tk.W)
-        self.btn_calibrate.grid(row=0, column=3, padx=4, pady=4, sticky=tk.W)
+        self.btn_fast_preset.grid(row=0, column=3, padx=4, pady=4, sticky=tk.W)
+        self.btn_calibrate.grid(row=0, column=4, padx=4, pady=4, sticky=tk.W)
         self.btn_mvp.grid(row=1, column=0, padx=4, pady=4, sticky=tk.W)
         self.btn_trial.grid(row=1, column=1, padx=4, pady=4, sticky=tk.W)
         self.btn_trial_l2.grid(row=1, column=2, padx=4, pady=4, sticky=tk.W)
@@ -149,6 +155,15 @@ class LauncherApp(tk.Tk):
             "Launcher ready.\n"
             "Tip: use Select Robots (GUI), click robots to toggle selection, then Save Selection.\n"
         )
+
+    def _apply_fast_demo_preset(self) -> None:
+        self.speed.set("45")
+        self.roll_seconds.set("1.15")
+        self.lambda_value.set("10")
+        self.crowding_mode.set("inferred")
+        self.decision_min.set("0.9")
+        self.decision_max.set("1.2")
+        self._log("Applied Fast Demo Preset: speed=45 roll=1.15 lambda=10 inferred decision=0.9-1.2\n")
 
     def _log(self, text: str) -> None:
         self.output_text.insert(tk.END, text)

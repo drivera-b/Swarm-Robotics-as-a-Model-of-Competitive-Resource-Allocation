@@ -36,8 +36,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_SMALL_ARENA_ROLL_SECONDS,
         help="Max roll pulse duration",
     )
-    parser.add_argument("--decision-min", type=float, default=1.5, help="Decision loop min interval")
-    parser.add_argument("--decision-max", type=float, default=2.0, help="Decision loop max interval")
+    parser.add_argument("--decision-min", type=float, default=0.9, help="Decision loop min interval")
+    parser.add_argument("--decision-max", type=float, default=1.2, help="Decision loop max interval")
     parser.add_argument("--scan-timeout", type=float, default=10.0)
     parser.add_argument("--seed", type=int, default=0, help="0 = no fixed seed")
     parser.add_argument(

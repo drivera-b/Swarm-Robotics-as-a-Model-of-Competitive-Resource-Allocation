@@ -127,7 +127,7 @@ Use this first to verify concurrent connect + roll + stop reliability:
 
 ```bash
 python scripts/run_calibrate.py --num-robots 3 --test-roll
-python scripts/run_mvp.py --num-robots 3 --speed 35 --roll-seconds 1.1
+python scripts/run_mvp.py --num-robots 3 --speed 45 --roll-seconds 1.15
 ```
 
 Expected behavior:
@@ -162,11 +162,11 @@ Arena assumptions encoded in code:
 - score rule:
   - `score = zone_value(t) - (lambda * robots_near_zone)`
 - small-arena motion tuning:
-  - default speed `35` (recommended range: `25-35`)
-  - capped short roll pulses (max `1.1s`) to keep motion purposeful without large overshoot
+  - fast-demo default speed `45` (adjust down if needed for your floor friction)
+  - capped short roll pulses (max `1.15s`) to keep motion purposeful without large overshoot
   - stop/hold behavior when near zone center
   - simple local avoidance: if another robot is estimated nearby, heading is adjusted slightly before move
-  - faster update cadence default (`decision-min=1.5`, `decision-max=2.0`)
+  - fast update cadence default (`decision-min=0.9`, `decision-max=1.2`)
 
 ### Option A: inferred crowding (from last chosen zones)
 
