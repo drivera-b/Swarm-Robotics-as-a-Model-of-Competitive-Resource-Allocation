@@ -88,6 +88,10 @@ async def connect_clients(
     num_robots: int,
     scan_timeout: float,
 ) -> list[RobotClient]:
+    print(
+        "Preflight: place all robots with the same physical front orientation before connecting "
+        "for more consistent heading behavior."
+    )
     config = load_config(config_path)
     targets = selected_robot_targets(config, num_robots)
     toys = await _resolve_toys_with_retries(targets, scan_timeout)

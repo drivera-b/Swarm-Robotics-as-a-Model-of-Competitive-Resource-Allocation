@@ -31,11 +31,11 @@ class AgentConfig:
     roll_seconds: float
     speed: int
     trial_seconds: int
-    min_roll_seconds: float = 0.3
-    max_roll_seconds: float = 0.9
-    zone_stop_radius_in: float = 2.0
-    collision_distance_threshold_in: float = 4.0
-    avoidance_heading_offset_deg: float = 15.0
+    min_roll_seconds: float = 0.45
+    max_roll_seconds: float = 1.2
+    zone_stop_radius_in: float = 1.5
+    collision_distance_threshold_in: float = 2.0
+    avoidance_heading_offset_deg: float = 8.0
     speed_to_inches_per_second: float = 0.22
 
 

@@ -124,7 +124,7 @@ Example `config.json`:
 Use this first to verify concurrent connect + roll + stop reliability:
 
 ```bash
-python scripts/run_mvp.py --num-robots 3 --speed 30 --roll-seconds 0.9
+python scripts/run_mvp.py --num-robots 3 --speed 35 --roll-seconds 1.1
 ```
 
 Expected behavior:
@@ -159,10 +159,11 @@ Arena assumptions encoded in code:
 - score rule:
   - `score = zone_value(t) - (lambda * robots_near_zone)`
 - small-arena motion tuning:
-  - default speed `30` (recommended range: `25-35`)
-  - capped short roll pulses (max `0.9s`) to reduce overshoot
+  - default speed `35` (recommended range: `25-35`)
+  - capped short roll pulses (max `1.1s`) to keep motion purposeful without large overshoot
   - stop/hold behavior when near zone center
   - simple local avoidance: if another robot is estimated nearby, heading is adjusted slightly before move
+  - faster update cadence default (`decision-min=1.5`, `decision-max=2.0`)
 
 ### Option A: inferred crowding (from last chosen zones)
 

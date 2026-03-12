@@ -33,5 +33,5 @@ ZONE_SCHEDULE: tuple[tuple[int, int, dict[str, int]], ...] = (
 DEFAULT_TRIAL_SECONDS = 90
 
 # Smaller arena defaults and conservative motion tuning.
-DEFAULT_SMALL_ARENA_SPEED = 30
-DEFAULT_SMALL_ARENA_ROLL_SECONDS = 0.9
+DEFAULT_SMALL_ARENA_SPEED = 35
+DEFAULT_SMALL_ARENA_ROLL_SECONDS = 1.1
