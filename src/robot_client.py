@@ -24,6 +24,7 @@ class RobotClient:
         try:
             self._api = self._api_class(self.toy)
             await asyncio.to_thread(self._api.__enter__)
+            await self.calibrate_heading_reference()
             await asyncio.sleep(0.2)
         except Exception as exc:
             raise RobotConnectionError(f"Failed to connect robot '{self.robot_id}': {exc}") from exc
@@ -44,6 +45,32 @@ class RobotClient:
     async def roll_for(self, heading: int, speed: int, duration: float) -> None:
         async with self._command_lock:
             await asyncio.to_thread(self._roll_sync, heading, speed, duration)
+
+    async def calibrate_heading_reference(self) -> None:
+        """Reset aim so current physical forward direction becomes heading 0."""
+        async with self._command_lock:
+            await asyncio.to_thread(self._calibrate_heading_reference_sync)
+
+    def _calibrate_heading_reference_sync(self) -> None:
+        api = self._require_api()
+
+        if hasattr(api, "set_speed"):
+            try:
+                api.set_speed(0)
+            except TypeError:
+                try:
+                    api.set_speed(speed=0)
+                except TypeError:
+                    pass
+
+        if hasattr(api, "reset_aim"):
+            api.reset_aim()
+        if hasattr(api, "set_heading"):
+            try:
+                api.set_heading(0)
+            except TypeError:
+                api.set_heading(heading=0)
+        time.sleep(0.05)
 
     def _roll_sync(self, heading: int, speed: int, duration: float) -> None:
         api = self._require_api()

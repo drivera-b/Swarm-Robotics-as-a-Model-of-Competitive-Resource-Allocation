@@ -99,6 +99,7 @@ class LauncherApp(tk.Tk):
             text="Select Robots (GUI)",
             command=self._open_robot_selector,
         )
+        self.btn_calibrate = ttk.Button(buttons, text="Calibrate Heading", command=self._run_calibrate)
         self.btn_mvp = ttk.Button(buttons, text="Run MVP", command=self._run_mvp)
         self.btn_trial = ttk.Button(buttons, text="Run Trial", command=self._run_trial)
         self.btn_trial_l2 = ttk.Button(
@@ -122,6 +123,7 @@ class LauncherApp(tk.Tk):
         self.btn_scan.grid(row=0, column=0, padx=4, pady=4, sticky=tk.W)
         self.btn_discovery_save.grid(row=0, column=1, padx=4, pady=4, sticky=tk.W)
         self.btn_select_gui.grid(row=0, column=2, padx=4, pady=4, sticky=tk.W)
+        self.btn_calibrate.grid(row=0, column=3, padx=4, pady=4, sticky=tk.W)
         self.btn_mvp.grid(row=1, column=0, padx=4, pady=4, sticky=tk.W)
         self.btn_trial.grid(row=1, column=1, padx=4, pady=4, sticky=tk.W)
         self.btn_trial_l2.grid(row=1, column=2, padx=4, pady=4, sticky=tk.W)
@@ -417,6 +419,25 @@ class LauncherApp(tk.Tk):
             self.scan_timeout.get(),
         ]
         self._start_command(cmd, "Running MVP test...")
+
+    def _run_calibrate(self) -> None:
+        if not self._validate_common():
+            return
+        if not self._ensure_num_robots_matches_config():
+            return
+        cmd = [
+            "scripts/run_calibrate.py",
+            "--num-robots",
+            self.num_robots.get(),
+            "--scan-timeout",
+            self.scan_timeout.get(),
+            "--test-roll",
+            "--test-speed",
+            "25",
+            "--test-seconds",
+            "0.45",
+        ]
+        self._start_command(cmd, "Calibrating heading reference...")
 
     def _run_trial(self) -> None:
         if not self._validate_common():

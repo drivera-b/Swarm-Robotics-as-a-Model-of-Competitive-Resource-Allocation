@@ -18,6 +18,7 @@ sphero_stem_expo/
   config.json                  # created/updated by discovery script
   data/                        # CSV output
   scripts/
+    run_calibrate.py
     run_discovery.py
     run_launcher.py
     run_mvp.py
@@ -72,8 +73,9 @@ Recommended launcher flow:
 2. Click `Scan Nearby`
 3. (Optional) use `Search`/`Apply Filter`, then click robots to toggle selection
 4. Click `Save Selection` (this also auto-sets `Num Robots`)
-5. Click `Run MVP`
-6. Click `Run Trial`
+5. Place all robots with the same forward orientation, then click `Calibrate Heading`
+6. Click `Run MVP`
+7. Click `Run Trial`
 
 For manual lambda testing with inferred crowding, use:
 - `Run Trial (lambda=2, inferred)`
@@ -124,6 +126,7 @@ Example `config.json`:
 Use this first to verify concurrent connect + roll + stop reliability:
 
 ```bash
+python scripts/run_calibrate.py --num-robots 3 --test-roll
 python scripts/run_mvp.py --num-robots 3 --speed 35 --roll-seconds 1.1
 ```
 
